@@ -1,0 +1,29 @@
+{
+  "planPath": "docs/plans/2026-03-25-recruiting-platform-implementation.md",
+  "tasks": [
+    {"id": 0, "subject": "Task 0: Project Scaffolding & Docker Setup", "status": "pending"},
+    {"id": 1, "subject": "Task 1: Prisma Schema — All 34 Entities", "status": "pending", "blockedBy": [0]},
+    {"id": 2, "subject": "Task 2: Seed Script — Reference Data", "status": "pending", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 3: Auth — NextAuth.js + Dev Bypass + RBAC", "status": "pending", "blockedBy": [1]},
+    {"id": 4, "subject": "Task 4: Audit Trail & Encryption Services", "status": "pending", "blockedBy": [1]},
+    {"id": 5, "subject": "Task 5: API Routes — Reference Data CRUD", "status": "pending", "blockedBy": [2, 3, 4]},
+    {"id": 6, "subject": "Task 6: API Routes — Requisitions", "status": "pending", "blockedBy": [2, 3, 4]},
+    {"id": 7, "subject": "Task 7: API Routes — Candidates & Stage Transitions", "status": "pending", "blockedBy": [2, 3, 4]},
+    {"id": 8, "subject": "Task 8: API Routes — Interviews, Offers, Background Checks", "status": "pending", "blockedBy": [2, 3, 4]},
+    {"id": 9, "subject": "Task 9: API Routes — Reports & Excel Export", "status": "pending", "blockedBy": [5, 6, 7, 8]},
+    {"id": 10, "subject": "Task 10: API Routes — Compliance", "status": "pending", "blockedBy": [5, 6, 7, 8]},
+    {"id": 11, "subject": "Task 11: UI Shell — Layout, Navigation, Notification Bell", "status": "pending", "blockedBy": [3]},
+    {"id": 12, "subject": "Task 12: Recruiter Dashboard — Morning Coffee View", "status": "pending", "blockedBy": [5, 6, 7, 8, 11]},
+    {"id": 13, "subject": "Task 13: Pipeline Kanban Board", "status": "pending", "blockedBy": [7, 11]},
+    {"id": 14, "subject": "Task 14: Open Requisitions & Candidate Detail Pages", "status": "pending", "blockedBy": [6, 7, 11]},
+    {"id": 15, "subject": "Task 15: Interview & Offer Management UI", "status": "pending", "blockedBy": [8, 11]},
+    {"id": 16, "subject": "Task 16: Hiring Manager Portal", "status": "pending", "blockedBy": [6, 7, 8, 11]},
+    {"id": 17, "subject": "Task 17: Admin Dashboard — Analytics, Leaderboard, Funnel", "status": "pending", "blockedBy": [5, 6, 7, 8, 9, 10, 11]},
+    {"id": 18, "subject": "Task 18: Admin — Reports Hub, Financial Tracking, Settings", "status": "pending", "blockedBy": [9, 10, 11]},
+    {"id": 19, "subject": "Task 19: Admin — Compliance Dashboard", "status": "pending", "blockedBy": [10, 11]},
+    {"id": 20, "subject": "Task 20: Excel Import UI & Data Migration", "status": "pending", "blockedBy": [9]},
+    {"id": 21, "subject": "Task 21: Polish — Mobile, First Login, Error Boundaries", "status": "pending", "blockedBy": [12, 13, 14, 15, 16, 17, 18, 19]},
+    {"id": 22, "subject": "Task 22: Testing & Launch Preparation", "status": "pending", "blockedBy": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]}
+  ],
+  "lastUpdated": "2026-03-25T12:00:00Z"
+}

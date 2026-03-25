@@ -1,0 +1,744 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum Role {
+  RECRUITER
+  RECRUITING_MANAGER
+  HIRING_MANAGER
+}
+
+enum ReqStatus {
+  OPEN
+  ON_HOLD
+  FILLED_PAPERWORK
+  PENDING
+  CLOSED
+}
+
+enum OfferStatus {
+  DRAFT
+  REVISION_REQUESTED
+  APPROVED
+  EXTENDED
+  ACCEPTED
+  DECLINED
+  RESCINDED
+}
+
+enum BackgroundCheckType {
+  ADP_STANDARD
+  ACCURATE_AMAZON
+  CONCENTRA
+}
+
+enum BackgroundCheckStatus {
+  PENDING
+  IN_PROGRESS
+  CLEAR
+  RECORD_FOUND
+  ADVERSE_ACTION_IN_PROGRESS
+}
+
+enum NdaStatus {
+  NOT_REQUIRED
+  PENDING
+  SIGNED
+}
+
+enum InterviewType {
+  SCREEN
+  VIDEO
+  ONSITE
+  PANEL
+}
+
+enum InterviewOutcome {
+  PASS
+  FAIL
+  HOLD
+  PENDING
+}
+
+enum DocumentType {
+  RESUME
+  COVER_LETTER
+  PORTFOLIO
+  NDA_SIGNED
+  REFERENCE
+  OTHER
+}
+
+enum ConsentType {
+  APPLICATION
+  TALENT_POOL
+  BACKGROUND_CHECK
+  EEO_VOLUNTARY
+}
+
+enum DSARRequestType {
+  ACCESS
+  DELETE
+  CORRECT
+  RESTRICT
+  PORTABILITY
+}
+
+enum DSARStatus {
+  RECEIVED
+  IN_PROGRESS
+  COMPLETED
+  DENIED
+}
+
+enum ReferralBonusStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+enum FeeStructure {
+  PERCENTAGE
+  FLAT
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  STAGE_TRANSITION
+  READ_PII
+  LOGIN
+  LOGOUT
+  EXPORT
+  IMPORT
+}
+
+// ============================================================================
+// CORE ENTITIES
+// ============================================================================
+
+model User {
+  id                     String    @id @default(uuid())
+  email                  String    @unique
+  name                   String
+  role                   Role
+  departmentId           String?
+  department             Department? @relation(fields: [departmentId], references: [id])
+  isActive               Boolean   @default(true)
+  lastLoginAt            DateTime?
+  deactivatedAt          DateTime?
+  welcomeBannerDismissed Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  // Relations
+  managedReqs        Requisition[]          @relation("HiringManager")
+  assignedReqs       RequisitionRecruiter[]
+  interviews         InterviewInterviewer[]
+  stageTransitions   StageTransition[]
+  approvedOffers     Offer[]                @relation("OfferApprover")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  dsarHandled        DSARRequest[]
+  legalHoldsCreated  LegalHold[]            @relation("HoldCreator")
+  legalHoldsReleased LegalHold[]            @relation("HoldReleaser")
+  documentsUploaded  CandidateDocument[]
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  requisitions      Requisition[]
+  agencyFees        AgencyFee[]
+  recruitingBudgets RecruitingBudget[]
+}
+
+model Location {
+  id            String   @id @default(uuid())
+  name          String
+  country       String
+  stateProvince String?
+  timezone      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  requisitions Requisition[]
+
+  @@unique([name, country])
+}
+
+model PipelineStage {
+  id                      String   @id @default(uuid())
+  name                    String   @unique
+  order                   Int      @unique
+  isTerminal              Boolean  @default(false)
+  requiresApproval        Boolean  @default(false)
+  requiresBackgroundCheck Boolean  @default(false)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  candidates      Candidate[]
+  transitionsFrom StageTransition[] @relation("FromStage")
+  transitionsTo   StageTransition[] @relation("ToStage")
+}
+
+model Source {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidates Candidate[]
+}
+
+model PostingChannel {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requisitionPostings RequisitionPosting[]
+}
+
+model Client {
+  id                        String              @id @default(uuid())
+  name                      String              @unique
+  requiresDrugScreen        Boolean             @default(false)
+  requiresTBTest            Boolean             @default(false)
+  requiresAdditionalBGCheck Boolean             @default(false)
+  bgCheckType               BackgroundCheckType?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  offers Offer[]
+}
+
+model Agency {
+  id           String       @id @default(uuid())
+  name         String       @unique
+  contact      String?
+  feeStructure FeeStructure @default(PERCENTAGE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  fees AgencyFee[]
+}
+
+model EmployeeType {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  isExempt    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  offers Offer[]
+}
+
+// ============================================================================
+// REQUISITION
+// ============================================================================
+
+model Requisition {
+  id                  String    @id @default(uuid())
+  reqNumber           String    @unique
+  title               String
+  departmentId        String
+  department          Department @relation(fields: [departmentId], references: [id])
+  locationId          String
+  location            Location  @relation(fields: [locationId], references: [id])
+  hiringManagerId     String
+  hiringManager       User      @relation("HiringManager", fields: [hiringManagerId], references: [id])
+  status              ReqStatus @default(OPEN)
+  billable            Boolean   @default(true)
+  targetDate          DateTime?
+  positionsTotal      Int       @default(1)
+  positionsFilled     Int       @default(0)
+  payRangeMin         Float?
+  payRangeMax         Float?
+  benefitsDescription String?
+  evergreen           Boolean   @default(false)
+  priority            Boolean   @default(false)
+  workerCategory      String?
+  reasonForHire       String?
+  dateOpened          DateTime  @default(now())
+  dateClosed          DateTime?
+  publishStartDate    DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  recruiters  RequisitionRecruiter[]
+  postings    RequisitionPosting[]
+  candidates  Candidate[]
+
+  @@index([status])
+  @@index([hiringManagerId])
+  @@index([departmentId])
+}
+
+model RequisitionRecruiter {
+  id            String      @id @default(uuid())
+  requisitionId String
+  requisition   Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  assignedAt    DateTime    @default(now())
+
+  @@unique([requisitionId, userId])
+}
+
+model RequisitionPosting {
+  id               String         @id @default(uuid())
+  requisitionId    String
+  requisition      Requisition    @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  postingChannelId String
+  postingChannel   PostingChannel @relation(fields: [postingChannelId], references: [id])
+  postedAt         DateTime       @default(now())
+  removedAt        DateTime?
+
+  @@unique([requisitionId, postingChannelId])
+}
+
+// ============================================================================
+// CANDIDATE
+// ============================================================================
+
+model Candidate {
+  id                      String        @id @default(uuid())
+  firstName               String
+  lastName                String
+  email                   String        // Encrypted (Tier 3)
+  phone                   String?       // Encrypted (Tier 3)
+  jurisdiction            String?       // US state code, "UK", "Ireland", "India"
+  requisitionId           String
+  requisition             Requisition   @relation(fields: [requisitionId], references: [id])
+  currentStageId          String
+  currentStage            PipelineStage @relation(fields: [currentStageId], references: [id])
+  sourceId                String?
+  source                  Source?       @relation(fields: [sourceId], references: [id])
+  sourceDetail            String?
+  compensationExpectation String?       // Encrypted (Tier 2)
+  appliedAt               DateTime      @default(now())
+  rejectionReason         String?
+  rejectionReasonCode     String?
+  notes                   String?
+  ndaStatus               NdaStatus     @default(NOT_REQUIRED)
+  ndaSentAt               DateTime?
+  ndaSignedAt             DateTime?
+  ndaJurisdiction         String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  interviews       Interview[]
+  offers           Offer[]
+  stageTransitions StageTransition[]
+  backgroundChecks BackgroundCheck[]
+  documents        CandidateDocument[]
+  consents         Consent[]
+  eeoData          EEOSelfIdentification?
+  dsarRequests     DSARRequest[]
+
+  @@index([requisitionId])
+  @@index([currentStageId])
+  @@index([email])
+  @@index([lastName, firstName])
+}
+
+model CandidateDocument {
+  id           String       @id @default(uuid())
+  candidateId  String
+  candidate    Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  fileName     String
+  fileUrl      String
+  uploadedById String
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+  uploadedAt   DateTime     @default(now())
+  type         DocumentType @default(OTHER)
+}
+
+// ============================================================================
+// INTERVIEW
+// ============================================================================
+
+model Interview {
+  id                         String           @id @default(uuid())
+  candidateId                String
+  candidate                  Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  scheduledAt                DateTime
+  type                       InterviewType    @default(VIDEO)
+  scorecard                  Json?
+  feedback                   String?
+  outcome                    InterviewOutcome @default(PENDING)
+  noShow                     Boolean          @default(false)
+  rescheduledFromInterviewId String?
+  rescheduledFrom            Interview?       @relation("Reschedule", fields: [rescheduledFromInterviewId], references: [id])
+  rescheduledTo              Interview[]      @relation("Reschedule")
+  ndaRequired                Boolean          @default(true)
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+
+  interviewers InterviewInterviewer[]
+
+  @@index([candidateId])
+  @@index([scheduledAt])
+}
+
+model InterviewInterviewer {
+  id          String    @id @default(uuid())
+  interviewId String
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([interviewId, userId])
+}
+
+// ============================================================================
+// OFFER
+// ============================================================================
+
+model Offer {
+  id                            String       @id @default(uuid())
+  candidateId                   String
+  candidate                     Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  salary                        String?      // Encrypted (Tier 2)
+  payRate                       String?      // Encrypted (Tier 2)
+  billRate                      String?      // Encrypted (Tier 2)
+  startDate                     DateTime?
+  status                        OfferStatus  @default(DRAFT)
+  declineReason                 String?
+  rescindReason                 String?
+  offerLetterUrl                String?
+  employeeTypeId                String?
+  employeeType                  EmployeeType? @relation(fields: [employeeTypeId], references: [id])
+  exemptStatus                  String?
+  bonusCommissionPlan           String?
+  commissionAmount              Float?
+  bonusAmount                   Float?
+  additionalExpenses            Float?
+  expiresAt                     DateTime?
+  approvedById                  String?
+  approvedBy                    User?        @relation("OfferApprover", fields: [approvedById], references: [id])
+  approvedAt                    DateTime?
+  clientId                      String?
+  client                        Client?      @relation(fields: [clientId], references: [id])
+  clientRequiresDrugScreen      Boolean      @default(false)
+  clientRequiresTBTest          Boolean      @default(false)
+  clientRequiresAdditionalBGCheck Boolean    @default(false)
+  createdAt                     DateTime     @default(now())
+  updatedAt                     DateTime     @updatedAt
+
+  revisions OfferRevision[]
+
+  @@index([candidateId])
+  @@index([status])
+}
+
+model OfferRevision {
+  id             String   @id @default(uuid())
+  offerId        String
+  offer          Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  revisionNumber Int
+  salary         String?
+  payRate        String?
+  billRate       String?
+  proposedBy     String   // "candidate" or "employer"
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  @@unique([offerId, revisionNumber])
+}
+
+// ============================================================================
+// STAGE TRANSITION
+// ============================================================================
+
+model StageTransition {
+  id          String         @id @default(uuid())
+  candidateId String
+  candidate   Candidate      @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  fromStageId String?
+  fromStage   PipelineStage? @relation("FromStage", fields: [fromStageId], references: [id])
+  toStageId   String
+  toStage     PipelineStage  @relation("ToStage", fields: [toStageId], references: [id])
+  movedById   String
+  movedBy     User           @relation(fields: [movedById], references: [id])
+  movedAt     DateTime       @default(now())
+  notes       String?
+
+  @@index([candidateId])
+  @@index([movedAt])
+  @@index([toStageId])
+}
+
+// ============================================================================
+// BACKGROUND CHECK
+// ============================================================================
+
+model BackgroundCheck {
+  id                        String                @id @default(uuid())
+  candidateId               String
+  candidate                 Candidate             @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  type                      BackgroundCheckType
+  status                    BackgroundCheckStatus  @default(PENDING)
+  initiatedAt               DateTime              @default(now())
+  completedAt               DateTime?
+  result                    String?
+  preAdverseNoticeSentAt    DateTime?
+  fcraRightsSentAt          DateTime?
+  waitingPeriodExpiresAt    DateTime?
+  adverseActionNoticeSentAt DateTime?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+
+  @@index([candidateId])
+  @@index([status])
+}
+
+// ============================================================================
+// COMPLIANCE ENTITIES
+// ============================================================================
+
+model Consent {
+  id                     String               @id @default(uuid())
+  candidateId            String
+  candidate              Candidate            @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  privacyNoticeVersionId String
+  privacyNoticeVersion   PrivacyNoticeVersion @relation(fields: [privacyNoticeVersionId], references: [id])
+  type                   ConsentType
+  jurisdiction           String
+  grantedAt              DateTime             @default(now())
+  expiresAt              DateTime?
+  withdrawnAt            DateTime?
+  refreshReminderSentAt  DateTime?
+  createdAt              DateTime             @default(now())
+
+  @@index([candidateId])
+  @@index([expiresAt])
+}
+
+model PrivacyNoticeVersion {
+  id            String    @id @default(uuid())
+  jurisdiction  String
+  version       Int
+  content       String
+  effectiveDate DateTime
+  supersededAt  DateTime?
+  createdAt     DateTime  @default(now())
+
+  consents Consent[]
+
+  @@unique([jurisdiction, version])
+}
+
+model LegalHold {
+  id            String    @id @default(uuid())
+  entityType    String
+  entityId      String
+  reason        String
+  caseReference String?
+  createdById   String
+  createdBy     User      @relation("HoldCreator", fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+  releasedById  String?
+  releasedBy    User?     @relation("HoldReleaser", fields: [releasedById], references: [id])
+  releasedAt    DateTime?
+
+  @@index([entityType, entityId])
+  @@index([releasedAt])
+}
+
+model EEOSelfIdentification {
+  id                  String    @id @default(uuid())
+  candidateId         String    @unique
+  candidate           Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  race                String?
+  ethnicity           String?
+  gender              String?
+  disabilityStatus    String?
+  veteranStatus       String?
+  collectedAt         DateTime  @default(now())
+  voluntarilyProvided Boolean   @default(true)
+}
+
+model DataRetentionPolicy {
+  id            String   @id @default(uuid())
+  entityType    String
+  jurisdiction  String
+  retentionDays Int
+  autoDelete    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([entityType, jurisdiction])
+}
+
+model DSARRequest {
+  id              String          @id @default(uuid())
+  candidateId     String
+  candidate       Candidate       @relation(fields: [candidateId], references: [id])
+  requestType     DSARRequestType
+  jurisdiction    String
+  receivedAt      DateTime        @default(now())
+  dueDate         DateTime
+  status          DSARStatus      @default(RECEIVED)
+  completedAt     DateTime?
+  responseDetails String?
+  handledById     String?
+  handledBy       User?           @relation(fields: [handledById], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+model DataBreach {
+  id                     String    @id @default(uuid())
+  incidentDate           DateTime
+  discoveredDate         DateTime
+  classification         String
+  description            String
+  affectedDataTypes      String[]
+  affectedCandidateCount Int       @default(0)
+  affectedJurisdictions  Json?
+  notificationsSentAt    DateTime?
+  resolvedAt             DateTime?
+  postmortemUrl          String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+// ============================================================================
+// SUPPORTING ENTITIES
+// ============================================================================
+
+model AgencyFee {
+  id           String     @id @default(uuid())
+  agencyId     String
+  agency       Agency     @relation(fields: [agencyId], references: [id])
+  candidateId  String?
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  amount       Float
+  quarter      String
+  invoiceDate  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([agencyId])
+  @@index([departmentId])
+  @@index([quarter])
+}
+
+model RecruitingBudget {
+  id           String     @id @default(uuid())
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  quarter      String
+  budgetAmount Float
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([departmentId, quarter])
+}
+
+model ReferralBonus {
+  id          String              @id @default(uuid())
+  referrer    String
+  candidateId String?
+  amount      Float
+  status      ReferralBonusStatus @default(PENDING)
+  paidDate    DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  link      String?
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+}
+
+model MetricSnapshot {
+  id         String   @id @default(uuid())
+  date       DateTime
+  metricType String
+  value      Float
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([metricType, date])
+}
+
+model CostPerHireConfig {
+  id            String   @id @default(uuid())
+  period        String
+  payrollCost   Float
+  toolsCost     Float
+  effectiveDate DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id])
+  action     AuditAction
+  entityType String
+  entityId   String
+  changes    Json?
+  timestamp  DateTime    @default(now())
+  ipAddress  String?
+  sessionId  String?
+
+  @@index([entityType, entityId, timestamp])
+  @@index([userId, timestamp])
+  @@index([timestamp])
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  type        String
+  generatedAt DateTime @default(now())
+  parameters  Json?
+  fileUrl     String?
+  createdAt   DateTime @default(now())
+}
+
+model ReportSchedule {
+  id         String   @id @default(uuid())
+  reportType String   @unique
+  frequency  String
+  nextRunAt  DateTime
+  format     String   @default("xlsx")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
