@@ -34,7 +34,7 @@ export default function LoginPage() {
           {/* Dev Mode Quick Links */}
           <div className="space-y-3">
             <Link
-              href="/dashboard"
+              href="/recruiter/dashboard"
               className="block w-full py-3 px-4 bg-denali-cyan/10 text-denali-cyan font-medium rounded-lg border border-denali-cyan/20 hover:bg-denali-cyan/20 transition-colors text-center"
             >
               Enter as Recruiter
