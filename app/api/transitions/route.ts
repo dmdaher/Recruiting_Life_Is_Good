@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { success, validationError, enforcementBlocked, notFound } from "@/lib/api/response";
 import { validateFCRAAdverseAction, validateBackgroundCheckTiming } from "@/lib/enforcement/rules";
+import { logStageTransition } from "@/lib/audit/service";
 
 // POST /api/transitions — Move a candidate to a new stage
 export async function POST(request: NextRequest) {
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest) {
       data: { positionsFilled: { increment: 1 } },
     });
   }
+
+  await logStageTransition(movedById, candidateId, fromStage.name, toStage.name);
 
   return success({
     transition,

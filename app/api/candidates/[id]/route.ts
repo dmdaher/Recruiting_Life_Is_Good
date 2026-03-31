@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { success, notFound, conflictError } from "@/lib/api/response";
+import { getAuthUser } from "@/lib/auth/rbac";
+import { logPIIAccess, logMutation } from "@/lib/audit/service";
 
 // GET /api/candidates/:id
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +36,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   });
 
   if (!candidate) return notFound("Candidate");
+
+  // Log PII access (SOC 2 — Tier 3 data viewed)
+  const user = await getAuthUser();
+  if (user) {
+    await logPIIAccess(user.id, "candidate", id, ["email", "phone", "compensationExpectation"]);
+  }
+
   return success(candidate);
 }
 
@@ -74,6 +83,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     include: { currentStage: true, source: true },
   });
 
+  const updateUser = await getAuthUser();
+  await logMutation(updateUser?.id ?? "system", "UPDATE", "candidate", id,
+    { firstName: existing.firstName, lastName: existing.lastName },
+    { firstName: updated.firstName, lastName: updated.lastName }
+  );
+
   return success(updated);
 }
 
@@ -83,7 +98,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const existing = await prisma.candidate.findUnique({ where: { id } });
   if (!existing) return notFound("Candidate");
 
-  // Check for legal holds before deletion
+  // Check for legal holds before deletion (Enforcement Rule 4)
   const holds = await prisma.legalHold.findMany({
     where: { entityType: "candidate", entityId: id, releasedAt: null },
   });
@@ -93,6 +108,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       holds: holds.map((h) => ({ id: h.id, reason: h.reason })),
     });
   }
+
+  const deleteUser = await getAuthUser();
+  await logMutation(deleteUser?.id ?? "system", "DELETE", "candidate", id,
+    { firstName: existing.firstName, lastName: existing.lastName, email: existing.email },
+    null
+  );
 
   await prisma.candidate.delete({ where: { id } });
   return success({ deleted: true });

@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { success, validationError, enforcementBlocked, notFound } from "@/lib/api/response";
 import { validateNDAForInterview } from "@/lib/enforcement/rules";
+import { getAuthUser } from "@/lib/auth/rbac";
+import { logMutation } from "@/lib/audit/service";
 
 // GET /api/interviews
 export async function GET(request: NextRequest) {
@@ -77,6 +79,11 @@ export async function POST(request: NextRequest) {
       candidate: { select: { id: true, firstName: true, lastName: true } },
       interviewers: { include: { user: { select: { id: true, name: true } } } },
     },
+  });
+
+  const user = await getAuthUser();
+  await logMutation(user?.id ?? "system", "CREATE", "interview", interview.id, null, {
+    candidateId, scheduledAt: body.scheduledAt, type: body.type ?? "VIDEO",
   });
 
   return success(full, 201);

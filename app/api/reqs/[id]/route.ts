@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { success, notFound, validationError, conflictError, enforcementBlocked } from "@/lib/api/response";
 import { validatePayRange } from "@/lib/enforcement/rules";
+import { getAuthUser } from "@/lib/auth/rbac";
+import { logMutation } from "@/lib/audit/service";
 
 // GET /api/reqs/:id
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -71,6 +73,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     include: { department: true, location: true },
   });
 
+  const user = await getAuthUser();
+  await logMutation(user?.id ?? "system", "UPDATE", "requisition", id,
+    { status: existing.status, title: existing.title },
+    { status: updated.status, title: updated.title }
+  );
+
   return success(updated);
 }
 
@@ -89,6 +97,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       holds: holds.map((h) => ({ id: h.id, reason: h.reason })),
     });
   }
+
+  const delUser = await getAuthUser();
+  await logMutation(delUser?.id ?? "system", "DELETE", "requisition", id,
+    { reqNumber: existing.reqNumber, title: existing.title }, null
+  );
 
   await prisma.requisition.delete({ where: { id } });
   return success({ deleted: true });

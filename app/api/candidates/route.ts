@@ -2,18 +2,20 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { success, validationError } from "@/lib/api/response";
 import { checkDuplicateFields } from "@/lib/enforcement/rules";
+import { getAuthUser, scopeCandidatesForUser } from "@/lib/auth/rbac";
+import { logMutation } from "@/lib/audit/service";
 
-// GET /api/candidates
+// GET /api/candidates (scoped by role)
 export async function GET(request: NextRequest) {
+  const user = await getAuthUser(request);
   const { searchParams } = new URL(request.url);
   const requisitionId = searchParams.get("requisitionId");
   const stageId = searchParams.get("stageId");
-  const sourceId = searchParams.get("sourceId");
 
-  const where: Record<string, unknown> = {};
+  const roleScope = user ? scopeCandidatesForUser(user) : {};
+  const where: Record<string, unknown> = { ...roleScope };
   if (requisitionId) where.requisitionId = requisitionId;
   if (stageId) where.currentStageId = stageId;
-  if (sourceId) where.sourceId = sourceId;
 
   const candidates = await prisma.candidate.findMany({
     where,
@@ -31,15 +33,14 @@ export async function GET(request: NextRequest) {
 
 // POST /api/candidates
 export async function POST(request: NextRequest) {
+  const user = await getAuthUser(request);
   const body = await request.json();
-
   const { firstName, lastName, email, requisitionId } = body;
 
   if (!firstName || !lastName || !email || !requisitionId) {
     return validationError("Missing required fields: firstName, lastName, email, requisitionId");
   }
 
-  // Enforcement Rule 8: Duplicate detection
   const normalized = checkDuplicateFields(firstName, lastName, email);
 
   const duplicates = await prisma.candidate.findMany({
@@ -56,11 +57,8 @@ export async function POST(request: NextRequest) {
     take: 5,
   });
 
-  // Get the first pipeline stage (Sourced)
   const firstStage = await prisma.pipelineStage.findFirst({ orderBy: { order: "asc" } });
-  if (!firstStage) {
-    return validationError("No pipeline stages configured. Run seed script first.");
-  }
+  if (!firstStage) return validationError("No pipeline stages configured.");
 
   const candidate = await prisma.candidate.create({
     data: {
@@ -84,34 +82,31 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // Create initial stage transition
-  if (body.movedById) {
+  if (body.movedById || user?.id) {
     await prisma.stageTransition.create({
       data: {
         candidateId: candidate.id,
         toStageId: candidate.currentStageId,
-        movedById: body.movedById,
+        movedById: body.movedById ?? user?.id ?? "",
         notes: "Initial placement",
       },
     });
   }
 
-  return success(
-    {
-      candidate,
-      duplicateWarning: duplicates.length > 0
-        ? {
-            message: `Potential duplicate(s) found: ${duplicates.map((d) => `${d.firstName} ${d.lastName} (${d.requisition.reqNumber} — ${d.currentStage.name})`).join(", ")}`,
-            duplicates: duplicates.map((d) => ({
-              id: d.id,
-              name: `${d.firstName} ${d.lastName}`,
-              email: d.email,
-              req: d.requisition.reqNumber,
-              stage: d.currentStage.name,
-            })),
-          }
-        : null,
-    },
-    201
-  );
+  await logMutation(user?.id ?? "system", "CREATE", "candidate", candidate.id, null, {
+    name: `${normalized.firstName} ${normalized.lastName}`,
+    requisitionId,
+  });
+
+  return success({
+    candidate,
+    duplicateWarning: duplicates.length > 0
+      ? {
+          message: `Potential duplicate(s) found: ${duplicates.map((d) => `${d.firstName} ${d.lastName} (${d.requisition.reqNumber} — ${d.currentStage.name})`).join(", ")}`,
+          duplicates: duplicates.map((d) => ({
+            id: d.id, name: `${d.firstName} ${d.lastName}`, email: d.email, req: d.requisition.reqNumber, stage: d.currentStage.name,
+          })),
+        }
+      : null,
+  }, 201);
 }

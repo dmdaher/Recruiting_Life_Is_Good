@@ -2,20 +2,20 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { success, validationError, enforcementBlocked } from "@/lib/api/response";
 import { validatePayRange } from "@/lib/enforcement/rules";
+import { getAuthUser, scopeReqsForUser } from "@/lib/auth/rbac";
+import { logMutation } from "@/lib/audit/service";
 
-// GET /api/reqs — List requisitions
+// GET /api/reqs — List requisitions (scoped by role)
 export async function GET(request: NextRequest) {
+  const user = await getAuthUser(request);
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const departmentId = searchParams.get("departmentId");
-  const recruiterId = searchParams.get("recruiterId");
 
-  const where: Record<string, unknown> = {};
+  const roleScope = user ? scopeReqsForUser(user) : {};
+  const where: Record<string, unknown> = { ...roleScope };
   if (status) where.status = status;
   if (departmentId) where.departmentId = departmentId;
-  if (recruiterId) {
-    where.recruiters = { some: { userId: recruiterId } };
-  }
 
   const reqs = await prisma.requisition.findMany({
     where,
@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/reqs — Create requisition
 export async function POST(request: NextRequest) {
+  const user = await getAuthUser(request);
   const body = await request.json();
 
   const { title, departmentId, locationId, hiringManagerId, reqNumber } = body;
@@ -49,7 +50,6 @@ export async function POST(request: NextRequest) {
     return enforcementBlocked(payRangeCheck.rule!, payRangeCheck.message!);
   }
 
-  // Check for duplicate req number
   const existing = await prisma.requisition.findUnique({ where: { reqNumber } });
   if (existing) {
     return validationError(`Requisition ${reqNumber} already exists`, "reqNumber");
@@ -57,11 +57,7 @@ export async function POST(request: NextRequest) {
 
   const req = await prisma.requisition.create({
     data: {
-      reqNumber,
-      title,
-      departmentId,
-      locationId,
-      hiringManagerId,
+      reqNumber, title, departmentId, locationId, hiringManagerId,
       status: body.status ?? "OPEN",
       billable: body.billable ?? true,
       targetDate: body.targetDate ? new Date(body.targetDate) : null,
@@ -74,22 +70,16 @@ export async function POST(request: NextRequest) {
       workerCategory: body.workerCategory,
       reasonForHire: body.reasonForHire,
     },
-    include: {
-      department: true,
-      location: true,
-      hiringManager: { select: { id: true, name: true } },
-    },
+    include: { department: true, location: true, hiringManager: { select: { id: true, name: true } } },
   });
 
-  // Assign recruiters if provided
   if (body.recruiterIds?.length) {
     await prisma.requisitionRecruiter.createMany({
-      data: body.recruiterIds.map((userId: string) => ({
-        requisitionId: req.id,
-        userId,
-      })),
+      data: body.recruiterIds.map((userId: string) => ({ requisitionId: req.id, userId })),
     });
   }
+
+  await logMutation(user?.id ?? "system", "CREATE", "requisition", req.id, null, { reqNumber, title });
 
   return success(req, 201);
 }

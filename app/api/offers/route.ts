@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { success, validationError, notFound } from "@/lib/api/response";
 import { validateMinimumWage } from "@/lib/enforcement/rules";
+import { getAuthUser } from "@/lib/auth/rbac";
+import { logMutation } from "@/lib/audit/service";
+import { encryptField } from "@/lib/encryption/service";
 
 // GET /api/offers
 export async function GET(request: NextRequest) {
@@ -54,9 +57,9 @@ export async function POST(request: NextRequest) {
   const offer = await prisma.offer.create({
     data: {
       candidateId,
-      salary: body.salary || null,
-      payRate: body.payRate || null,
-      billRate: body.billRate || null,
+      salary: encryptField(body.salary) ?? null,
+      payRate: encryptField(body.payRate) ?? null,
+      billRate: encryptField(body.billRate) ?? null,
       startDate: body.startDate ? new Date(body.startDate) : null,
       status: "DRAFT",
       employeeTypeId: body.employeeTypeId || null,
@@ -72,6 +75,11 @@ export async function POST(request: NextRequest) {
       clientRequiresAdditionalBGCheck: body.clientRequiresAdditionalBGCheck ?? false,
     },
     include: { candidate: { select: { id: true, firstName: true, lastName: true } }, employeeType: true },
+  });
+
+  const user = await getAuthUser();
+  await logMutation(user?.id ?? "system", "CREATE", "offer", offer.id, null, {
+    candidateId, status: "DRAFT",
   });
 
   return success({ offer, minWageWarning }, 201);
