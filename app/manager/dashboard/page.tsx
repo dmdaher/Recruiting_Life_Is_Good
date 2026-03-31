@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/client";
+import { AdvanceButton, PassButton } from "@/components/manager/ReviewActions";
 
 export default async function ManagerDashboard() {
   // In production, this would be scoped to the logged-in HM's user ID
@@ -16,6 +17,8 @@ export default async function ManagerDashboard() {
     },
     orderBy: { dateOpened: "desc" },
   });
+
+  const screenStage = await prisma.pipelineStage.findFirst({ where: { name: "Screen" } });
 
   const now = new Date();
   const candidatesToReview = reqs.flatMap((r) =>
@@ -75,12 +78,8 @@ export default async function ManagerDashboard() {
                   <p className="text-xs text-denali-gray-500 mt-0.5">{c.reqNumber} &middot; {c.reqTitle}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="px-3 py-1.5 bg-denali-success/10 text-denali-success text-xs font-medium rounded-lg hover:bg-denali-success/20 transition-colors">
-                    Advance
-                  </button>
-                  <button className="px-3 py-1.5 bg-denali-danger/10 text-denali-danger text-xs font-medium rounded-lg hover:bg-denali-danger/20 transition-colors">
-                    Pass
-                  </button>
+                  <AdvanceButton candidateId={c.id} toStageId={screenStage?.id ?? ""} userId={hm?.id ?? ""} />
+                  <PassButton candidateId={c.id} userId={hm?.id ?? ""} />
                 </div>
               </div>
             ))}

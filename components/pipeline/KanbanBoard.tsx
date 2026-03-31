@@ -207,10 +207,51 @@ export function KanbanBoard({ columns: initialColumns, currentUserId }: { column
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-4">
-                <button className="w-full py-2.5 px-4 bg-denali-cyan text-denali-black font-medium rounded-lg hover:bg-denali-cyan/90 transition-colors text-sm">
+                <button
+                  onClick={() => {
+                    if (selectedCandidate.ndaStatus !== "SIGNED") {
+                      alert("NDA must be signed before scheduling an interview. Send NDA via DocuSign first.");
+                      return;
+                    }
+                    const scheduledAt = prompt("Enter interview date/time (YYYY-MM-DD HH:MM):");
+                    if (scheduledAt) {
+                      fetch("/api/interviews", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          candidateId: selectedCandidate.id,
+                          scheduledAt: new Date(scheduledAt).toISOString(),
+                          type: "VIDEO",
+                          ndaRequired: true,
+                        }),
+                      }).then(async (res) => {
+                        if (!res.ok) {
+                          const data = await res.json();
+                          alert(data.error || "Failed to schedule interview");
+                        } else {
+                          alert("Interview scheduled!");
+                          setSelectedCandidate(null);
+                        }
+                      });
+                    }
+                  }}
+                  className="w-full py-2.5 px-4 bg-denali-cyan text-denali-black font-medium rounded-lg hover:bg-denali-cyan/90 transition-colors text-sm"
+                >
                   Schedule Interview
                 </button>
-                <button className="w-full py-2.5 px-4 bg-denali-gray-800 text-denali-gray-200 font-medium rounded-lg hover:bg-denali-gray-700 transition-colors text-sm">
+                <button
+                  onClick={() => {
+                    const notes = prompt("Enter notes for this candidate:");
+                    if (notes) {
+                      fetch(`/api/candidates/${selectedCandidate.id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ notes }),
+                      }).then(() => alert("Notes saved!"));
+                    }
+                  }}
+                  className="w-full py-2.5 px-4 bg-denali-gray-800 text-denali-gray-200 font-medium rounded-lg hover:bg-denali-gray-700 transition-colors text-sm"
+                >
                   Add Notes
                 </button>
                 <button className="w-full py-2.5 px-4 bg-denali-gray-800 text-denali-gray-200 font-medium rounded-lg hover:bg-denali-gray-700 transition-colors text-sm">
