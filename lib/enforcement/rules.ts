@@ -101,19 +101,21 @@ export function validateMinimumWage(
   jurisdiction: string | null,
   exemptStatus: string | null
 ): { warning: boolean; message?: string } {
-  if (!payRate || !jurisdiction) return { warning: false };
+  if (!payRate) return { warning: false };
+
+  const effectiveJurisdiction = jurisdiction ?? "US";
 
   const minimumWages: Record<string, number> = {
     WA: 16.66,
     US: 7.25,
   };
 
-  const applicableMin = minimumWages[jurisdiction] ?? minimumWages["US"];
+  const applicableMin = minimumWages[effectiveJurisdiction] ?? minimumWages["US"];
 
   if (payRate < applicableMin) {
     return {
       warning: true,
-      message: `Offered pay rate ($${payRate}/hr) is below ${jurisdiction} minimum wage ($${applicableMin}/hr).${
+      message: `Offered pay rate ($${payRate}/hr) is below ${effectiveJurisdiction} minimum wage ($${applicableMin}/hr).${
         exemptStatus === "exempt" ? " Note: position is marked exempt." : ""
       }`,
     };
