@@ -19,6 +19,7 @@ const navItems = {
     { href: "/admin/reports", label: "Reports", icon: "📄" },
     { href: "/admin/financial", label: "Financial", icon: "💰" },
     { href: "/admin/compliance", label: "Compliance", icon: "🛡️" },
+    { href: "/admin/import", label: "Import Data", icon: "📥" },
     { href: "/admin/settings", label: "Settings", icon: "⚙️" },
     { href: "/admin/audit-log", label: "Audit Log", icon: "📜" },
   ],
