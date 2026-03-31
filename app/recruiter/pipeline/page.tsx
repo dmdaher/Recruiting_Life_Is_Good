@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/client";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
+import { SearchBar } from "@/components/pipeline/SearchBar";
 
 export default async function PipelinePage() {
   const devUser = await prisma.user.findFirst({ where: { role: "RECRUITER" } });
@@ -55,6 +56,7 @@ export default async function PipelinePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <SearchBar />
           <select className="bg-denali-gray-800 border border-denali-gray-700 rounded-lg px-3 py-2 text-sm text-denali-gray-300 focus:outline-none focus:ring-1 focus:ring-denali-cyan">
             <option value="">All Requisitions</option>
             {reqs.map((r) => (
