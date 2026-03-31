@@ -5,6 +5,13 @@ import { generateFilledPositionsReport, generateFilledPositionsExcel } from "@/l
 import { generateYTDPerformanceReport, generateYTDPerformanceExcel } from "@/lib/reports/generators/ytd-performance";
 import { generateAgencyFeesReport, generateAgencyFeesExcel } from "@/lib/reports/generators/agency-fees";
 import { generateTimeToFillReport, generateTimeToFillExcel } from "@/lib/reports/generators/time-to-fill";
+import { generateDailyRecruitingReport, generateDailyRecruitingExcel } from "@/lib/reports/generators/daily-recruiting";
+import { generateInterviewTrackingReport, generateInterviewTrackingExcel } from "@/lib/reports/generators/interview-tracking";
+import { generateRescindedOffersReport, generateRescindedOffersExcel } from "@/lib/reports/generators/rescinded-offers";
+import { generatePIRReport, generatePIRExcel } from "@/lib/reports/generators/pir";
+import { generateCostPerHireReport, generateCostPerHireExcel } from "@/lib/reports/generators/cost-per-hire";
+import { generateReferralBonusReport, generateReferralBonusExcel } from "@/lib/reports/generators/referral-bonus";
+import { generateReqAuditReport, generateReqAuditExcel } from "@/lib/reports/generators/req-audit";
 
 type ReportGenerator = {
   json: (filters?: Record<string, string>) => Promise<{ rows: unknown[]; columns: unknown[]; title: string }>;
@@ -17,6 +24,13 @@ const generators: Record<string, ReportGenerator> = {
   "ytd-performance": { json: generateYTDPerformanceReport, excel: generateYTDPerformanceExcel },
   "agency-fees": { json: generateAgencyFeesReport, excel: generateAgencyFeesExcel },
   "time-to-fill": { json: generateTimeToFillReport, excel: generateTimeToFillExcel },
+  "daily-recruiting": { json: generateDailyRecruitingReport, excel: generateDailyRecruitingExcel },
+  "interview-tracking": { json: generateInterviewTrackingReport, excel: generateInterviewTrackingExcel },
+  "rescinded-offers": { json: generateRescindedOffersReport, excel: generateRescindedOffersExcel },
+  "pir": { json: generatePIRReport, excel: generatePIRExcel },
+  "cost-per-hire": { json: generateCostPerHireReport, excel: generateCostPerHireExcel },
+  "referral-bonus": { json: generateReferralBonusReport, excel: generateReferralBonusExcel },
+  "req-audit": { json: generateReqAuditReport, excel: generateReqAuditExcel },
 };
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ type: string }> }) {
