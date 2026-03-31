@@ -42,9 +42,13 @@ export default async function ReportsPage() {
                 <button className="flex-1 py-2 px-3 bg-denali-gray-800 text-denali-gray-300 text-xs font-medium rounded-lg hover:bg-denali-gray-700 transition-colors">
                   View
                 </button>
-                <button className="flex-1 py-2 px-3 bg-denali-cyan/10 text-denali-cyan text-xs font-medium rounded-lg hover:bg-denali-cyan/20 transition-colors">
+                <a
+                  href={`/api/reports/${schedule.reportType}?format=excel`}
+                  download
+                  className="flex-1 py-2 px-3 bg-denali-cyan/10 text-denali-cyan text-xs font-medium rounded-lg hover:bg-denali-cyan/20 transition-colors text-center"
+                >
                   Export Excel
-                </button>
+                </a>
               </div>
             </div>
           );
