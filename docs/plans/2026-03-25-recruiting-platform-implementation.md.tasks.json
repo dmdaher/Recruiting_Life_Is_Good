@@ -22,8 +22,8 @@
     {"id": 18, "subject": "Task 18: Admin — Reports Hub, Financial Tracking, Settings", "status": "completed"},
     {"id": 19, "subject": "Task 19: Admin — Compliance Dashboard", "status": "completed"},
     {"id": 20, "subject": "Task 20: Excel Import UI & Data Migration", "status": "completed"},
-    {"id": 21, "subject": "Task 21: Polish — Mobile, First Login, Error Boundaries", "status": "pending"},
-    {"id": 22, "subject": "Task 22: Testing & Launch Preparation", "status": "pending"}
+    {"id": 21, "subject": "Task 21: Polish — Mobile, First Login, Error Boundaries", "status": "completed"},
+    {"id": 22, "subject": "Task 22: Testing & Launch Preparation", "status": "completed"}
   ],
   "lastUpdated": "2026-03-31T00:00:00Z"
 }
