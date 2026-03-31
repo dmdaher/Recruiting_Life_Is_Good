@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db/client";
+import { NewReqButton } from "@/components/forms/NewReqButton";
 
 export default async function RequisitionsPage() {
-  const reqs = await prisma.requisition.findMany({
+  const [reqs, departments, locations, allUsers] = await Promise.all([
+    prisma.requisition.findMany({
     include: {
       department: true,
       location: true,
@@ -10,7 +12,11 @@ export default async function RequisitionsPage() {
       candidates: { include: { currentStage: true } },
     },
     orderBy: { dateOpened: "desc" },
-  });
+  }),
+    prisma.department.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
+    prisma.location.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, country: true } }),
+    prisma.user.findMany({ where: { isActive: true }, select: { id: true, name: true, role: true } }),
+  ]);
 
   const now = new Date();
 
@@ -26,9 +32,7 @@ export default async function RequisitionsPage() {
             {reqs.length} total
           </p>
         </div>
-        <button className="px-4 py-2.5 bg-denali-cyan text-denali-black font-medium rounded-lg hover:bg-denali-cyan/90 transition-colors text-sm">
-          + New Requisition
-        </button>
+        <NewReqButton departments={departments} locations={locations} users={allUsers} />
       </div>
 
       {/* Requisitions Table */}

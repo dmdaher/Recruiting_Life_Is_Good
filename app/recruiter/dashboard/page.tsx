@@ -6,8 +6,10 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 import { NewCandidates } from "@/components/dashboard/NewCandidates";
 
 export default async function RecruiterDashboard() {
+  const devUser = await prisma.user.findFirst({ where: { role: "RECRUITER" } });
+
   // Fetch real data from the database
-  const [candidates, reqs, stages, recentCandidates] = await Promise.all([
+  const [candidates, reqs, stages, recentCandidates, sources, allUsers] = await Promise.all([
     prisma.candidate.findMany({
       include: {
         currentStage: true,
@@ -33,6 +35,8 @@ export default async function RecruiterDashboard() {
       orderBy: { appliedAt: "desc" },
       take: 5,
     }),
+    prisma.source.findMany({ orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { isActive: true }, select: { id: true, name: true, role: true } }),
   ]);
 
   // Calculate metrics
@@ -163,7 +167,11 @@ export default async function RecruiterDashboard() {
       {/* Third Row: Alerts + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AlertsPanel alerts={alerts} />
-        <QuickActions />
+        <QuickActions
+          requisitions={reqs.map((r) => ({ id: r.id, reqNumber: r.reqNumber, title: r.title }))}
+          sources={sources.map((s) => ({ id: s.id, name: s.name }))}
+          userId={devUser?.id ?? ""}
+        />
       </div>
     </div>
   );
