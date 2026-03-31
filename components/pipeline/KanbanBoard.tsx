@@ -34,7 +34,7 @@ export type ColumnData = {
   candidates: CandidateData[];
 };
 
-export function KanbanBoard({ columns: initialColumns }: { columns: ColumnData[] }) {
+export function KanbanBoard({ columns: initialColumns, currentUserId }: { columns: ColumnData[]; currentUserId: string }) {
   const [columns, setColumns] = useState(initialColumns);
   const [activeCandidate, setActiveCandidate] = useState<CandidateData | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateData | null>(null);
@@ -99,10 +99,28 @@ export function KanbanBoard({ columns: initialColumns }: { columns: ColumnData[]
       })
     );
 
-    // TODO: Call API to persist stage transition
-    console.log(
-      `Moved ${candidate.firstName} ${candidate.lastName} from ${sourceCol.name} to ${targetCol.name}`
-    );
+    // Persist stage transition via API
+    fetch("/api/transitions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        candidateId: activeId,
+        toStageId: targetCol.id,
+        movedById: currentUserId,
+        notes: `Moved from ${sourceCol.name} to ${targetCol.name}`,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json();
+          // Revert on enforcement block
+          if (data.code === "ENFORCEMENT_BLOCKED") {
+            alert(`Blocked: ${data.error}`);
+            setColumns(initialColumns); // revert
+          }
+        }
+      })
+      .catch(console.error);
   }
 
   return (

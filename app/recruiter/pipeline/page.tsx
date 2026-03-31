@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db/client";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 
 export default async function PipelinePage() {
+  const devUser = await prisma.user.findFirst({ where: { role: "RECRUITER" } });
+
   const [stages, candidates, reqs] = await Promise.all([
     prisma.pipelineStage.findMany({ orderBy: { order: "asc" } }),
     prisma.candidate.findMany({
@@ -64,7 +66,7 @@ export default async function PipelinePage() {
         </div>
       </div>
 
-      <KanbanBoard columns={columns} />
+      <KanbanBoard columns={columns} currentUserId={devUser?.id ?? ""} />
     </div>
   );
 }
