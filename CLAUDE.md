@@ -72,26 +72,27 @@ docs/plans/
   2026-03-25-recruiting-platform-implementation.md.tasks.json → Task status tracker
 ```
 
-## Current State (2026-03-26)
+## Current State (2026-03-30)
 
-**Completed (11 of 23 tasks):**
+**Completed (15 of 23 tasks):**
 - Project scaffolding, Prisma schema (34 entities), seed data
 - UI Shell (sidebar, header), Denali dark theme
-- Recruiter dashboard (morning coffee view, 5 panels)
-- Pipeline Kanban (drag-and-drop, 8 columns, candidate slide-out)
-- Requisitions table, Hires log
+- All core API routes: reqs, candidates, transitions, interviews, offers, background checks, notifications, admin CRUD
+- All 8 enforcement rules implemented and audited
+- Functional forms: AddCandidate, CreateReq, ScheduleInterview, CreateOffer modals
+- Kanban drag-and-drop persists to database via /api/transitions
+- Recruiter dashboard (morning coffee view, 5 panels with Quick Actions wired)
+- Pipeline Kanban, Requisitions table, Hires log
 - Admin dashboard (leaderboard, funnel, source effectiveness)
 - Admin reports hub, financial tracking, settings, compliance dashboard, audit log
 - Hiring Manager portal (dashboard, review queue, offer approvals)
 - Login page (dev-mode role selection)
 
-**Not yet built (12 of 23 tasks):**
+**Not yet built (8 of 23 tasks):**
 - Task 3: Authentication (NextAuth.js + Microsoft Entra SSO + RBAC)
 - Task 4: Audit trail + encryption services
-- Tasks 5-8: API routes for CRUD operations (reqs, candidates, interviews, offers)
-- Task 9: Report generation engine + Excel export
-- Task 10: Compliance API routes
-- Task 15: Interview & Offer management forms (NDA gate, scorecards)
+- Task 9: Report generation engine + Excel export ← **START HERE**
+- Task 10: Compliance API routes (DSAR, consent, retention engine)
 - Task 20: Excel import wizard
 - Task 21: Mobile responsive polish
 - Task 22: Testing + CI pipeline
