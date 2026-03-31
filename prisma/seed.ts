@@ -421,6 +421,26 @@ async function main() {
     console.log(`  ✓ ${sampleCandidates.length} sample candidates`);
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // EQUIPMENT PACKAGES (Phase 2 — auto-assign by role family)
+  // ──────────────────────────────────────────────────────────────────────────
+  const equipmentPackages = [
+    { name: "Developer Standard", hardwareType: "MAC" as const, peripherals: ["keyboard", "mouse", "docking_station", "2x_monitor", "headset", "webcam"], roleFamily: "Engineering", isDefault: true },
+    { name: "PM Standard", hardwareType: "PC" as const, peripherals: ["keyboard", "mouse", "docking_station", "1x_monitor", "headset"], roleFamily: "PM", isDefault: true },
+    { name: "Admin Basic", hardwareType: "PC" as const, peripherals: ["keyboard", "mouse"], roleFamily: "Admin", isDefault: true },
+    { name: "Field Service", hardwareType: "PC" as const, peripherals: ["keyboard", "mouse", "headset"], roleFamily: "Field Service", isDefault: true },
+    { name: "Sales Standard", hardwareType: "PC" as const, peripherals: ["keyboard", "mouse", "docking_station", "2x_monitor", "headset", "webcam"], roleFamily: "Sales", isDefault: true },
+  ];
+
+  for (const pkg of equipmentPackages) {
+    await prisma.equipmentPackage.upsert({
+      where: { name: pkg.name },
+      update: {},
+      create: pkg,
+    });
+  }
+  console.log(`  ✓ ${equipmentPackages.length} equipment packages`);
+
   console.log("\n✅ Seed complete!");
 }
 

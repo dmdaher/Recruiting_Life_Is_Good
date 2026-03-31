@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/client";
 import { success, validationError, enforcementBlocked, notFound } from "@/lib/api/response";
 import { validateFCRAAdverseAction, validateBackgroundCheckTiming } from "@/lib/enforcement/rules";
 import { logStageTransition } from "@/lib/audit/service";
+import { createOnboardingForCandidate } from "@/lib/onboarding/create-onboarding";
 
 // POST /api/transitions — Move a candidate to a new stage
 export async function POST(request: NextRequest) {
@@ -69,12 +70,20 @@ export async function POST(request: NextRequest) {
     }),
   ]);
 
-  // If moved to terminal stage (Hired), increment positionsFilled
+  // If moved to terminal stage (Hired), increment positionsFilled + trigger onboarding
   if (toStage.isTerminal) {
     await prisma.requisition.update({
       where: { id: candidate.requisitionId },
       data: { positionsFilled: { increment: 1 } },
     });
+
+    // Phase 2: Auto-create onboarding record + milestones
+    try {
+      await createOnboardingForCandidate(candidateId, movedById);
+    } catch (e) {
+      console.error("[ONBOARDING] Failed to auto-create onboarding:", e);
+      // Non-blocking — stage transition still succeeds
+    }
   }
 
   await logStageTransition(movedById, candidateId, fromStage.name, toStage.name);
