@@ -153,6 +153,12 @@ model User {
   legalHoldsCreated  LegalHold[]            @relation("HoldCreator")
   legalHoldsReleased LegalHold[]            @relation("HoldReleaser")
   documentsUploaded  CandidateDocument[]
+  // Phase 2: Onboarding relations
+  greeterAssignments     OnboardingRecord[]     @relation("GreeterAssignment")
+  equipmentConfirmations PIFData[]              @relation("EquipmentConfirmer")
+  milestonesCompleted    OnboardingMilestone[]  @relation("MilestoneCompleter")
+  milestoneEscalations   OnboardingMilestone[]  @relation("MilestoneEscalation")
+  accessRequested        AccessRequest[]        @relation("AccessRequester")
 
   @@index([role])
   @@index([isActive])
@@ -356,6 +362,7 @@ model Candidate {
   consents         Consent[]
   eeoData          EEOSelfIdentification?
   dsarRequests     DSARRequest[]
+  onboarding       OnboardingRecord?
 
   @@index([requisitionId])
   @@index([currentStageId])
@@ -741,4 +748,306 @@ model ReportSchedule {
   format     String   @default("xlsx")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// ============================================================================
+// PHASE 2: ONBOARDING ORCHESTRATION
+// ============================================================================
+
+enum OnboardingStatus {
+  NOT_STARTED
+  PIF_PENDING
+  IN_PROGRESS
+  DAY1_READY
+  ONBOARDING_COMPLETED
+}
+
+enum PIFType {
+  NEW_HIRE
+  REHIRE
+  INTERNAL_TRANSFER
+}
+
+enum OrientationLocation {
+  REDMOND_ONSITE
+  WEBEX_REMOTE
+}
+
+enum HardwareType {
+  PC
+  MAC
+}
+
+enum EquipmentDeliveryMethod {
+  PICKUP
+  SHIP_TO_HOME
+  DESK_SETUP
+}
+
+enum I9Status {
+  I9_NOT_STARTED
+  I9_EMAIL_SENT
+  I9_SUBMITTED
+  I9_VERIFIED
+}
+
+enum AccessReqStatus {
+  ACCESS_PENDING
+  ACCESS_COMPLETED
+}
+
+enum ContractStatus {
+  CONTRACT_DRAFT
+  MANAGER_SIGNED
+  CANDIDATE_SIGNED
+  CONTRACT_COMPLETED
+}
+
+enum MedicalClearance {
+  MEDICAL_PENDING
+  MEDICAL_CLEARED
+  MEDICAL_BLOCKED
+}
+
+enum PayFrequency {
+  BIWEEKLY
+  MONTHLY_PAY
+}
+
+// --- Core Onboarding Entities ---
+
+model OnboardingRecord {
+  id                      String              @id @default(uuid())
+  candidateId             String              @unique
+  candidate               Candidate           @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  status                  OnboardingStatus    @default(PIF_PENDING)
+  hireDate                DateTime?
+  orientationDate         DateTime?
+  orientationLocation     OrientationLocation?
+  neoTimeSlot             String?
+  pifSubmittedAt          DateTime?
+  pifApprovedAt           DateTime?
+  itRequestSubmittedAt    DateTime?
+  itEquipmentReadyAt      DateTime?
+  hNoteGeneratedAt        DateTime?
+  hNoteSentAt             DateTime?
+  backgroundCheckClearedAt DateTime?
+  neoEmailSentAt          DateTime?
+  preworkCompletedAt      DateTime?
+  greeterAssignedToId     String?
+  greeterAssignedTo       User?               @relation("GreeterAssignment", fields: [greeterAssignedToId], references: [id])
+  greeterLocation         String?
+  greeterMeetingTime      DateTime?
+  greeterConfirmedAt      DateTime?
+  greeterNotes            String?
+  day1ReadyConfirmedAt    DateTime?
+  denaliEmail             String?
+  employeePositionId      String?
+  payFrequency            PayFrequency?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  pifData                 PIFData?
+  milestones              OnboardingMilestone[]
+  prework                 CandidatePrework?
+  accessRequests          AccessRequest[]
+  onboardingPlan          OnboardingPlan?
+  contractTracking        ContractTracking?
+  medicalCompliance       MedicalCompliance?
+  internationalDetails    InternationalHireDetails?
+
+  @@index([status])
+  @@index([hireDate])
+}
+
+model PIFData {
+  id                      String              @id @default(uuid())
+  onboardingId            String              @unique
+  onboarding              OnboardingRecord    @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  // --- PIF Fields (all 25+ from SOP) ---
+  pifType                 PIFType             @default(NEW_HIRE)
+  employeeName            String
+  jobReqNumber            String
+  referrerName            String?
+  recruiterName           String?
+  agencyName              String?
+  agencyFee               String?
+  positionTitle           String
+  officeLocation          String
+  country                 String
+  neoLocation             String?
+  clientOnsiteStartDate   DateTime?
+  employeeType            String?
+  bonusCommissionPlan     String?
+  payRate                 String?             // Encrypted (Tier 2)
+  billRate                String?             // Encrypted (Tier 2)
+  managerName             String
+  accountingCode          String
+  supervisorRole          Boolean             @default(false)
+  billable                Boolean             @default(true)
+  salesforceAccess        Boolean             @default(false)
+  cpqPermissions          Boolean             @default(false)
+  kimbleApproval          Boolean             @default(false)
+  kimbleTimeEntry         Boolean             @default(true)
+  businessCards           Boolean             @default(false)
+  itEquipmentNeeded       Boolean             @default(true)
+  client                  String?
+  drugScreenRequired      Boolean             @default(false)
+  tbTestRequired          Boolean             @default(false)
+  additionalBGCheck       Boolean             @default(false)
+  desiredAlias            String?
+  // --- IT Request Fields ---
+  hardwareType            HardwareType?
+  peripherals             Json?               // ["keyboard", "mouse", "docking_station", ...]
+  deliveryMethod          EquipmentDeliveryMethod?
+  businessReason          String?
+  additionalInfo          String?
+  equipmentPackageId      String?
+  equipmentPackage        EquipmentPackage?   @relation(fields: [equipmentPackageId], references: [id])
+  // --- Equipment Tracking ---
+  equipmentTrackingNumber String?
+  equipmentShippedAt      DateTime?
+  equipmentDeliveredAt    DateTime?
+  equipmentDeskLocation   String?
+  equipmentSetupConfirmedAt DateTime?
+  equipmentSetupConfirmedById String?
+  equipmentSetupConfirmedBy User?             @relation("EquipmentConfirmer", fields: [equipmentSetupConfirmedById], references: [id])
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+}
+
+model OnboardingMilestone {
+  id                      String              @id @default(uuid())
+  onboardingId            String
+  onboarding              OnboardingRecord    @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  milestone               String              // PIF_SUBMITTED, IT_REQUEST_SENT, BG_CHECK_INITIATED, etc.
+  targetDate              DateTime
+  completedAt             DateTime?
+  completedById           String?
+  completedBy             User?               @relation("MilestoneCompleter", fields: [completedById], references: [id])
+  escalatedAt             DateTime?
+  escalationSentToId      String?
+  escalationSentTo        User?               @relation("MilestoneEscalation", fields: [escalationSentToId], references: [id])
+  notes                   String?
+  createdAt               DateTime            @default(now())
+
+  @@index([onboardingId])
+  @@index([milestone])
+  @@index([targetDate])
+}
+
+model EquipmentPackage {
+  id                      String              @id @default(uuid())
+  name                    String              @unique
+  hardwareType            HardwareType
+  peripherals             Json                // ["keyboard", "mouse", "docking_station", ...]
+  roleFamily              String              // "Engineering", "PM", "Admin", "Field Service", "Sales"
+  isDefault               Boolean             @default(false)
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  pifData                 PIFData[]
+}
+
+model CandidatePrework {
+  id                      String              @id @default(uuid())
+  onboardingId            String              @unique
+  onboarding              OnboardingRecord    @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  i9Status                I9Status            @default(I9_NOT_STARTED)
+  i9DocumentsReceivedAt   DateTime?
+  taxWithholdingCompleted Boolean             @default(false)
+  companyPoliciesAcknowledged Boolean         @default(false)
+  directDepositSetup      Boolean             @default(false)
+  emergencyContactsProvided Boolean           @default(false)
+  marketingConsentSigned  Boolean             @default(false)
+  tshirtSize              String?
+  completedAt             DateTime?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+}
+
+model AccessRequest {
+  id                      String              @id @default(uuid())
+  onboardingId            String
+  onboarding              OnboardingRecord    @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  systemName              String
+  requestedAt             DateTime            @default(now())
+  completedAt             DateTime?
+  requestedById           String?
+  requestedBy             User?               @relation("AccessRequester", fields: [requestedById], references: [id])
+  status                  AccessReqStatus     @default(ACCESS_PENDING)
+
+  @@index([onboardingId])
+}
+
+model OnboardingPlan {
+  id                      String              @id @default(uuid())
+  onboardingId            String              @unique
+  onboarding              OnboardingRecord    @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  meetingsToSchedule      Json?               // [{ person, purpose, scheduled }]
+  trainingsRequired       Json?               // [{ name, completed }]
+  firstWeekTasks          Json?               // [{ task, completed }]
+  notes                   String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+}
+
+// --- Skeleton Entities (Phase A infrastructure) ---
+
+model ContractTracking {
+  id                      String              @id @default(uuid())
+  onboardingId            String              @unique
+  onboarding              OnboardingRecord    @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  jurisdiction            String              // "UK" or "IRELAND"
+  contractType            String
+  starterFormType         String?
+  managerSignedAt         DateTime?
+  candidateSignedAt       DateTime?
+  finalSignedAt           DateTime?
+  contractDocuSignId      String?
+  starterFormDocuSignId   String?
+  status                  ContractStatus      @default(CONTRACT_DRAFT)
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+}
+
+model MedicalCompliance {
+  id                      String              @id @default(uuid())
+  onboardingId            String              @unique
+  onboarding              OnboardingRecord    @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  clientName              String
+  drugScreenRequired      Boolean             @default(false)
+  drugScreenStatus        String?             // PENDING, PASSED, FAILED
+  drugScreenCompletedAt   DateTime?
+  tbTestRequired          Boolean             @default(false)
+  tbTestVisit1At          DateTime?
+  tbTestVisit2At          DateTime?
+  tbTestResult            String?
+  vaccinations            Json?               // [{ name, status, date }]
+  concentraAuthSentAt     DateTime?
+  canStartWithPending     Boolean             @default(false)
+  clearanceStatus         MedicalClearance    @default(MEDICAL_PENDING)
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+}
+
+model InternationalHireDetails {
+  id                      String              @id @default(uuid())
+  onboardingId            String              @unique
+  onboarding              OnboardingRecord    @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  jurisdiction            String              // "UK", "IRELAND", "INDIA"
+  // India
+  globalUpsideNotified    Boolean             @default(false)
+  noticePeriodDays        Int?
+  probationMonths         Int?
+  salaryBreakdown         Json?               // { basic, hra, conveyance, medical, ... }
+  // UK/Ireland
+  businessUnit            String?
+  positionIdFormat        String?
+  payrollContactNotified  Boolean             @default(false)
+  hmrcFormSubmitted       Boolean             @default(false)
+  standardHoursPerMonth   Float?
+  timeOffPolicies         Json?               // ["Holiday-UK", "Sick Leave-UK"]
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
 }
