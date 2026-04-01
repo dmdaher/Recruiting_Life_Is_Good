@@ -1,5 +1,7 @@
 "use client";
 
+import { ThemeToggle } from "./ThemeToggle";
+
 export function Header({
   userName,
   role,
@@ -16,6 +18,9 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Theme Toggle */}
+        <ThemeToggle />
+
         {/* Notification Bell */}
         <button className="relative p-2 text-denali-gray-400 hover:text-denali-gray-100 transition-colors">
           <svg
