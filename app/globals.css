@@ -62,3 +62,64 @@ body {
   font-family: var(--font-sans);
   transition: background-color 0.2s, color 0.2s;
 }
+
+/* ============================================================================
+   LIGHT MODE OVERRIDES — Fix hardcoded dark-only colors for readability
+   ============================================================================ */
+
+/* Status badge backgrounds — more opaque on light */
+[data-theme="light"] .bg-green-900\/30 { background-color: rgba(22, 163, 74, 0.15) !important; }
+[data-theme="light"] .bg-yellow-900\/30 { background-color: rgba(202, 138, 4, 0.15) !important; }
+[data-theme="light"] .bg-red-900\/30 { background-color: rgba(220, 38, 38, 0.12) !important; }
+[data-theme="light"] .bg-blue-900\/30 { background-color: rgba(37, 99, 235, 0.12) !important; }
+[data-theme="light"] .bg-purple-900\/30 { background-color: rgba(147, 51, 234, 0.12) !important; }
+[data-theme="light"] .bg-purple-500\/10 { background-color: rgba(147, 51, 234, 0.1) !important; }
+
+/* Alert/milestone backgrounds */
+[data-theme="light"] .bg-green-950\/20 { background-color: rgba(22, 163, 74, 0.08) !important; }
+[data-theme="light"] .bg-green-950\/30 { background-color: rgba(22, 163, 74, 0.1) !important; }
+[data-theme="light"] .bg-red-950\/30 { background-color: rgba(220, 38, 38, 0.08) !important; }
+[data-theme="light"] .bg-yellow-950\/30 { background-color: rgba(202, 138, 4, 0.08) !important; }
+
+/* Status text — darker for light backgrounds */
+[data-theme="light"] .text-green-400 { color: #15803d !important; }
+[data-theme="light"] .text-green-300 { color: #16a34a !important; }
+[data-theme="light"] .text-yellow-400 { color: #a16207 !important; }
+[data-theme="light"] .text-yellow-300 { color: #a16207 !important; }
+[data-theme="light"] .text-red-400 { color: #dc2626 !important; }
+[data-theme="light"] .text-red-300 { color: #b91c1c !important; }
+[data-theme="light"] .text-blue-400 { color: #2563eb !important; }
+[data-theme="light"] .text-purple-400 { color: #7c3aed !important; }
+
+/* Alert borders */
+[data-theme="light"] .border-green-900\/20 { border-color: rgba(22, 163, 74, 0.3) !important; }
+[data-theme="light"] .border-green-900\/30 { border-color: rgba(22, 163, 74, 0.3) !important; }
+[data-theme="light"] .border-red-900\/30 { border-color: rgba(220, 38, 38, 0.3) !important; }
+[data-theme="light"] .border-yellow-900\/30 { border-color: rgba(202, 138, 4, 0.3) !important; }
+[data-theme="light"] .border-purple-500\/20 { border-color: rgba(147, 51, 234, 0.3) !important; }
+
+/* Cyan accent — slightly darker for light mode readability */
+[data-theme="light"] .text-denali-cyan { color: #0099CC !important; }
+[data-theme="light"] .bg-denali-cyan\/10 { background-color: rgba(0, 153, 204, 0.1) !important; }
+[data-theme="light"] .bg-denali-cyan\/20 { background-color: rgba(0, 153, 204, 0.15) !important; }
+[data-theme="light"] .border-denali-cyan\/20 { border-color: rgba(0, 153, 204, 0.3) !important; }
+[data-theme="light"] .border-denali-cyan\/30 { border-color: rgba(0, 153, 204, 0.3) !important; }
+
+/* Overlay backgrounds */
+[data-theme="light"] .bg-black\/60 { background-color: rgba(0, 0, 0, 0.4) !important; }
+
+/* Success/Warning/Danger accent backgrounds */
+[data-theme="light"] .bg-denali-success\/10 { background-color: rgba(22, 163, 74, 0.1) !important; }
+[data-theme="light"] .bg-denali-success\/20 { background-color: rgba(22, 163, 74, 0.15) !important; }
+[data-theme="light"] .bg-denali-danger\/10 { background-color: rgba(220, 38, 38, 0.1) !important; }
+[data-theme="light"] .bg-denali-danger\/20 { background-color: rgba(220, 38, 38, 0.15) !important; }
+[data-theme="light"] .bg-denali-warning { color: #92400e !important; }
+[data-theme="light"] .text-denali-warning { color: #92400e !important; }
+[data-theme="light"] .text-denali-success { color: #15803d !important; }
+[data-theme="light"] .text-denali-danger { color: #b91c1c !important; }
+
+/* Sidebar nav inactive items — need more contrast on light bg */
+[data-theme="light"] .text-denali-gray-400 { color: #525252 !important; }
+
+/* Fix "NDA pending" warning dots */
+[data-theme="light"] .bg-denali-warning { background-color: #a16207 !important; }
