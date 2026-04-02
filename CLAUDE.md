@@ -23,17 +23,22 @@ App runs at http://localhost:3001
 
 ## Project Overview
 
-Internal recruiting platform for Denali Advanced Integration replacing manual Excel/Outlook workflows. Phase 1 covers recruiting (req intake through hire). Phase 2 (future) covers onboarding (hire through Day 1).
+Internal recruiting + onboarding platform for Denali Advanced Integration. Replaces manual Excel/Outlook workflows with a real-time, SOC 2-compliant web application.
+
+- **Phase 1 (COMPLETE):** Recruiting — req intake through hire
+- **Phase 2 (COMPLETE):** Onboarding orchestration — hire through Day 1 ready
 
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router)
 - **Language:** TypeScript
-- **Styling:** Tailwind CSS with Denali brand tokens (dark theme, #00C9FF cyan accent)
+- **Styling:** Tailwind CSS with CSS custom properties for dark/light theme
 - **Database:** PostgreSQL 16 via Docker Compose
 - **ORM:** Prisma 7 with PrismaPg adapter
-- **Auth:** NextAuth.js (not yet implemented — dev-mode open access)
+- **Auth:** NextAuth.js v5 (dev-mode credentials + Microsoft Entra SSO ready)
 - **DnD:** @dnd-kit/core for Kanban board
+- **Reports:** ExcelJS for branded Excel export
+- **Testing:** Playwright for E2E tests
 
 ## Prisma 7 Important Pattern
 
@@ -45,81 +50,105 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 ```
 
-The database URL is also configured in `prisma.config.ts` via dotenv.
+## Current State (2026-04-01)
+
+### What's Built — EVERYTHING
+
+**Phase 1 — Recruiting (COMPLETE):**
+- 22 pages across 3 portals (Recruiter, Admin, Hiring Manager) + login
+- Kanban pipeline with drag-and-drop (persists to DB)
+- All 12 reports with Denali-branded Excel export
+- RBAC integrated into API routes (role-based query scoping)
+- Audit logging on all CRUD operations + PII access
+- AES-256-GCM encryption on sensitive fields
+- 13 enforcement rules (WA EPOA, FCRA, NDA, Fair Chance Act, etc.)
+- Global candidate search
+- Light/dark theme toggle (CSS custom properties)
+
+**Phase 2 — Onboarding (COMPLETE):**
+- 10 new entities (OnboardingRecord, PIFData, OnboardingMilestone, etc.)
+- Unified PIF + IT form (replaces 2 disconnected forms)
+- H-Note auto-generation from PIF data (all 20 SOP fields)
+- 13-milestone tracker with SLA targets from SOP timelines
+- Manager readiness dashboard
+- Equipment tracking (desk setup / ship to home / pickup)
+- Candidate prework checklist (I-9, tax, policies)
+- Escalation engine for overdue milestones
+- International branching (UK/Ireland/India) with skeleton entities
+- Greeter assignment with confirmation
+
+**Platform Totals:**
+- 22 pages, 44+ API endpoints, 65+ routes
+- 44 database tables (34 Phase 1 + 10 Phase 2)
+- 13 enforcement rules
+- 12 report generators with Excel export
+- 36 E2E Playwright tests (all passing)
+- Light/dark theme toggle
+
+### What Could Be Enhanced (not phases — polish/integrations)
+
+- Microsoft Entra SSO (config ready, needs IT credentials)
+- Outlook/M365 calendar integration
+- ADP API integration (currently using Excel import)
+- Email delivery of reports (currently platform-only with Excel download)
+- Notification bell dropdown (wired to API but dropdown not built)
+- Candidate self-service portal (skeleton entities ready)
+- Gem ATS integration, Teams/Slack notifications, DocuSign integration
 
 ## Project Structure
 
 ```
 app/
-  (auth)/login/         → Login page with dev-mode role selection
-  recruiter/            → Recruiter portal (dashboard, pipeline, reqs, hires)
-  admin/                → Recruiting Manager portal (dashboard, reports, financial, compliance, settings, audit-log)
-  manager/              → Hiring Manager portal (dashboard)
-  generated/prisma/     → Generated Prisma client (do not edit)
+  (auth)/login/              → Login page with dev-mode role selection
+  recruiter/                 → Recruiter portal
+    dashboard/               → Morning coffee view (5 panels)
+    pipeline/                → Kanban board (8 stages, drag-and-drop)
+    reqs/                    → Requisitions table + new req form
+    hires/                   → Filled positions log
+    onboarding/              → Onboarding list + readiness dashboard
+    onboarding/[id]/pif/     → Unified PIF + IT form
+    onboarding/[id]/h-note/  → H-Note preview + send
+  admin/                     → Recruiting Manager portal
+    dashboard/               → Leaderboard, funnel, source effectiveness
+    reports/                 → 12 report cards with Excel export
+    financial/               → Agency fees, referral bonuses
+    compliance/              → DSAR, legal holds, retention policies
+    onboarding/              → All active onboardings overview
+    settings/                → 9 reference data sections
+    import/                  → Excel import wizard
+    audit-log/               → SOC 2 event viewer
+  manager/                   → Hiring Manager portal
+    dashboard/               → My reqs, candidate review, offer approvals
+    reqs/                    → My Requisitions list
+    reqs/[id]/               → Req detail with candidate review actions
+  api/                       → 44+ REST API endpoints
 components/
-  layout/               → Sidebar, Header
-  dashboard/            → Dashboard panels (MyCandidatesToday, MyNumbers, etc.)
-  pipeline/             → Kanban board, CandidateCard, KanbanColumn
+  layout/                    → Sidebar, Header, ThemeToggle
+  dashboard/                 → Dashboard panels
+  pipeline/                  → Kanban board, CandidateCard, SearchBar
+  forms/                     → AddCandidate, CreateReq, ScheduleInterview, CreateOffer modals
+  manager/                   → ReviewActions (Advance/Pass buttons)
+  onboarding/                → PIFForm, HNotePreview
 lib/
-  db/client.ts          → Prisma client singleton
+  api/                       → Response helpers, CRUD factory
+  auth/                      → NextAuth config, RBAC, session helpers
+  audit/                     → Audit trail service (SOC 2)
+  compliance/                → Retention engine
+  db/                        → Prisma client singleton
+  encryption/                → AES-256-GCM field encryption
+  enforcement/               → 13 enforcement rules
+  excel/                     → Exporter (branded), Importer (with validation)
+  onboarding/                → Create onboarding, H-Note generator
+  reports/generators/        → 12 report generators
 prisma/
-  schema.prisma         → 34 entities (source of truth for data model)
-  seed.ts               → Reference data + demo data
-  migrations/           → Database migrations
+  schema.prisma              → 44 entities
+  seed.ts                    → All reference data + demo data
+  migrations/                → Database migrations
 docs/plans/
-  2026-03-25-recruiting-platform-design.md              → Full design doc (compliance, data model, UX)
-  2026-03-25-recruiting-platform-implementation.md       → 23-task implementation plan
-  2026-03-25-recruiting-platform-implementation.md.tasks.json → Task status tracker
+  2026-03-25-recruiting-platform-design.md        → Phase 1 design
+  2026-03-31-onboarding-orchestration-design.md   → Phase 2 design
+  *.md.tasks.json                                 → Task status trackers
 ```
-
-## Current State (2026-03-30)
-
-**Completed (15 of 23 tasks):**
-- Project scaffolding, Prisma schema (34 entities), seed data
-- UI Shell (sidebar, header), Denali dark theme
-- All core API routes: reqs, candidates, transitions, interviews, offers, background checks, notifications, admin CRUD
-- All 8 enforcement rules implemented and audited
-- Functional forms: AddCandidate, CreateReq, ScheduleInterview, CreateOffer modals
-- Kanban drag-and-drop persists to database via /api/transitions
-- Recruiter dashboard (morning coffee view, 5 panels with Quick Actions wired)
-- Pipeline Kanban, Requisitions table, Hires log
-- Admin dashboard (leaderboard, funnel, source effectiveness)
-- Admin reports hub, financial tracking, settings, compliance dashboard, audit log
-- Hiring Manager portal (dashboard, review queue, offer approvals)
-- Login page (dev-mode role selection)
-
-**Not yet built (8 of 23 tasks):**
-- Task 3: Authentication (NextAuth.js + Microsoft Entra SSO + RBAC)
-- Task 4: Audit trail + encryption services
-- Task 9: Report generation engine + Excel export ← **START HERE**
-- Task 10: Compliance API routes (DSAR, consent, retention engine)
-- Task 20: Excel import wizard
-- Task 21: Mobile responsive polish
-- Task 22: Testing + CI pipeline
-
-## Key Design Decisions
-
-- **Pipeline stages are DB-driven** (PipelineStage table), not hardcoded
-- **8 enforcement rules** are hardcoded (FCRA, WA pay range, Fair Chance Act, NDA, etc.)
-- **4-tier data classification** (Restricted, Confidential, Internal, Aggregate Only)
-- **SOC 2 + GDPR + FCRA + EEOC + WA state law** compliance designed in
-- **Jurisdiction-aware retention** (US 5-7yr, UK/Ireland 1yr, India 1yr)
-- **EEO data physically separated** — never joins to candidate evaluation views
-
-## Environment Variables
-
-See `.env.example` for all required variables. Key ones:
-- `DATABASE_URL` — PostgreSQL connection string
-- `ENCRYPTION_KEY` — 32-char key for field-level encryption (not yet implemented)
-- `NEXTAUTH_SECRET` — Auth secret (not yet implemented)
-- `AZURE_AD_*` — Microsoft Entra SSO credentials (get from Denali IT)
-
-## Database
-
-- 34 tables, all created via Prisma migrations
-- Seed data: 22 departments, 14 locations, 12 sources, 9 agencies, 8 stages, 8 employee types, 5 clients, 3 dev users, 15 demo candidates, 6 demo reqs
-- To reset: `npx prisma migrate reset` (drops all data and re-seeds)
-- To view: `npx prisma studio`
 
 ## Design & Requirements Docs
 
@@ -127,4 +156,23 @@ Always read these before making changes:
 1. `PROJECT_REQUIREMENTS.md` — Original requirements from recruiting team
 2. `Denali_Onboarding_Complete_Context.md` — Full SOP with HR procedures
 3. `Denali_Onboarding_Context_Consolidated.md` — Manager experience perspective
-4. `docs/plans/2026-03-25-recruiting-platform-design.md` — Full design (compliance, data model, UX flows, enforcement rules)
+4. `docs/plans/2026-03-25-recruiting-platform-design.md` — Phase 1 design (compliance, data model, UX)
+5. `docs/plans/2026-03-31-onboarding-orchestration-design.md` — Phase 2 design (onboarding, PIF, milestones)
+
+## Environment Variables
+
+See `.env.example` for all required variables:
+- `DATABASE_URL` — PostgreSQL connection string
+- `ENCRYPTION_KEY` — 32-char key for AES-256-GCM field encryption
+- `NEXTAUTH_SECRET` — Auth session secret
+- `AZURE_AD_*` — Microsoft Entra SSO credentials (get from Denali IT)
+
+## Database
+
+- 44 tables across Phase 1 + Phase 2
+- To reset: `npx prisma migrate reset` (drops all data and re-seeds)
+- To view: `npx prisma studio`
+
+## Theme
+
+Light/dark toggle via sun/moon icon in header. Uses CSS custom properties on `data-theme` attribute — all `denali-gray-*` classes auto-flip. Light mode has CSS overrides in `globals.css` for status badges, alerts, and accent colors.
